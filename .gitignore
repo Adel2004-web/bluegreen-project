@@ -1,0 +1,5 @@
+.env
+.active_color
+.previous_color
+*.bak
+node_modules

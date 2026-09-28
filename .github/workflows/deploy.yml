@@ -1,0 +1,25 @@
+name: Deploy (blue-green)
+on:
+  push:
+    branches: [main]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test rapide de l'image
+        run: |
+          docker build -t test-app ./app
+          docker run -d --name t -p 3000:3000 test-app
+          sleep 5 && curl -f http://localhost:3000/health
+      - name: Déploiement SSH
+        env:
+          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          HOST: ${{ secrets.SSH_HOST }}
+          USER: ${{ secrets.SSH_USER }}
+        run: |
+          install -m 700 -d ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id && chmod 600 ~/.ssh/id
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
+          ssh -i ~/.ssh/id "$USER@$HOST" \
+            "cd ~/bluegreen && git pull origin main && ./scripts/deploy.sh ${GITHUB_SHA::7}"
